@@ -1,6 +1,6 @@
 package com.direwolf20.mininggadgets.client.particles;
 
-import com.direwolf20.mininggadgets.MiningGadgets;
+import com.direwolf20.mininggadgets.common.MiningGadgets;
 import com.direwolf20.mininggadgets.client.particles.laserparticle.LaserParticleData;
 import com.direwolf20.mininggadgets.client.particles.laserparticle.LaserParticleType;
 import com.direwolf20.mininggadgets.client.particles.lightparticle.LightParticleType;
@@ -12,6 +12,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ObjectHolder;
 
+// TODO: 12/07/2020 Replaces this with a deffered register
 @Mod.EventBusSubscriber(modid = MiningGadgets.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 @ObjectHolder(MiningGadgets.MOD_ID)
 public class ModParticles {

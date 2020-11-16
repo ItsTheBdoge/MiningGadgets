@@ -1,8 +1,8 @@
 package com.direwolf20.mininggadgets.common.items;
 
-import com.direwolf20.mininggadgets.MiningGadgets;
+import com.direwolf20.mininggadgets.common.MiningGadgets;
 import com.direwolf20.mininggadgets.common.blocks.ModBlocks;
-import com.direwolf20.mininggadgets.common.gadget.upgrade.Upgrade;
+import com.direwolf20.mininggadgets.common.items.upgrade.Upgrade;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraftforge.fml.RegistryObject;
@@ -12,10 +12,10 @@ import net.minecraftforge.registries.ForgeRegistries;
 public class ModItems {
     // The item group is the creative tab it will go into.
     public static final Item.Properties ITEM_GROUP = new Item.Properties().group(MiningGadgets.itemGroup);
-    public static final DeferredRegister<Item> ITEMS = new DeferredRegister<>(ForgeRegistries.ITEMS, MiningGadgets.MOD_ID);
+    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MiningGadgets.MOD_ID);
 
     // We have a separate register just to contain all of the upgrades for quick reference
-    public static final DeferredRegister<Item> UPGRADE_ITEMS = new DeferredRegister<>(ForgeRegistries.ITEMS, MiningGadgets.MOD_ID);
+    public static final DeferredRegister<Item> UPGRADE_ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MiningGadgets.MOD_ID);
 
     // Items
     public static final RegistryObject<Item> MININGGADGET = ITEMS.register("mininggadget", MiningGadget::new);
@@ -49,4 +49,5 @@ public class ModItems {
     public static final RegistryObject<Item> EFFICIENCY_3 =     UPGRADE_ITEMS.register("upgrade_efficiency_3", Upgrade.EFFICIENCY_3::getCard);
     public static final RegistryObject<Item> EFFICIENCY_4 =     UPGRADE_ITEMS.register("upgrade_efficiency_4", Upgrade.EFFICIENCY_4::getCard);
     public static final RegistryObject<Item> EFFICIENCY_5 =     UPGRADE_ITEMS.register("upgrade_efficiency_5", Upgrade.EFFICIENCY_5::getCard);
+    public static final RegistryObject<Item> PAVER =            UPGRADE_ITEMS.register("upgrade_paver", Upgrade.PAVER::getCard);
 }

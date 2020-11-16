@@ -1,18 +1,16 @@
 package com.direwolf20.mininggadgets.client.renderer;
 
-import com.direwolf20.mininggadgets.MiningGadgets;
-import com.direwolf20.mininggadgets.common.gadget.MiningProperties;
-import com.direwolf20.mininggadgets.common.gadget.upgrade.Upgrade;
-import com.direwolf20.mininggadgets.common.gadget.upgrade.UpgradeTools;
+import com.direwolf20.mininggadgets.common.MiningGadgets;
 import com.direwolf20.mininggadgets.common.items.MiningGadget;
+import com.direwolf20.mininggadgets.common.items.gadget.MiningProperties;
+import com.direwolf20.mininggadgets.common.items.upgrade.Upgrade;
+import com.direwolf20.mininggadgets.common.items.upgrade.UpgradeTools;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.client.renderer.Matrix4f;
 import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.Vector3f;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -21,7 +19,7 @@ import net.minecraft.util.HandSide;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -40,7 +38,7 @@ public class RenderMiningLaser {
 
         int range = MiningProperties.getBeamRange(stack);
 
-        Vec3d playerPos = player.getEyePosition(ticks);
+        Vector3d playerPos = player.getEyePosition(ticks);
         RayTraceResult trace = player.pick(range, 0.0F, false);
 
         // parse data from item
@@ -59,7 +57,7 @@ public class RenderMiningLaser {
         }
     }
 
-    private static void drawLasers(RenderWorldLastEvent event, Vec3d from, RayTraceResult trace, double xOffset, double yOffset, double zOffset, float r, float g, float b, float thickness, PlayerEntity player, float ticks, float speedModifier) {
+    private static void drawLasers(RenderWorldLastEvent event, Vector3d from, RayTraceResult trace, double xOffset, double yOffset, double zOffset, float r, float g, float b, float thickness, PlayerEntity player, float ticks, float speedModifier) {
         Hand activeHand;
         if (player.getHeldItemMainhand().getItem() instanceof MiningGadget) {
             activeHand = Hand.MAIN_HAND;
@@ -77,7 +75,7 @@ public class RenderMiningLaser {
         float additiveThickness = (thickness * 3.5f) * calculateLaserFlickerModifier(gameTime);
         BufferBuilder wr = Tessellator.getInstance().getBuffer();
 
-        Vec3d view = Minecraft.getInstance().gameRenderer.getActiveRenderInfo().getProjectedView();
+        Vector3d view = Minecraft.getInstance().gameRenderer.getActiveRenderInfo().getProjectedView();
 
         MatrixStack matrix = event.getMatrixStack();
         matrix.translate(view.getX(), view.getY(), view.getZ());

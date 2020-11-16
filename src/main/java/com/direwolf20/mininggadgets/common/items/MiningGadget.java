@@ -1,20 +1,21 @@
 package com.direwolf20.mininggadgets.common.items;
 
-import com.direwolf20.mininggadgets.Config;
-import com.direwolf20.mininggadgets.MiningGadgets;
+import com.direwolf20.mininggadgets.client.OurKeys;
 import com.direwolf20.mininggadgets.client.particles.playerparticle.PlayerParticleData;
 import com.direwolf20.mininggadgets.client.screens.ModScreens;
+import com.direwolf20.mininggadgets.common.Config;
+import com.direwolf20.mininggadgets.common.MiningGadgets;
 import com.direwolf20.mininggadgets.common.blocks.ModBlocks;
 import com.direwolf20.mininggadgets.common.blocks.RenderBlock;
 import com.direwolf20.mininggadgets.common.capabilities.CapabilityEnergyProvider;
-import com.direwolf20.mininggadgets.common.gadget.MiningCollect;
-import com.direwolf20.mininggadgets.common.gadget.MiningProperties;
-import com.direwolf20.mininggadgets.common.gadget.upgrade.Upgrade;
-import com.direwolf20.mininggadgets.common.gadget.upgrade.UpgradeTools;
+import com.direwolf20.mininggadgets.common.items.gadget.MiningCollect;
+import com.direwolf20.mininggadgets.common.items.gadget.MiningProperties;
+import com.direwolf20.mininggadgets.common.items.upgrade.Upgrade;
+import com.direwolf20.mininggadgets.common.items.upgrade.UpgradeTools;
 import com.direwolf20.mininggadgets.common.sounds.LaserLoopSound;
 import com.direwolf20.mininggadgets.common.sounds.OurSounds;
 import com.direwolf20.mininggadgets.common.tiles.RenderBlockTileEntity;
-import com.direwolf20.mininggadgets.common.util.MiscTools;
+import com.direwolf20.mininggadgets.common.util.MagicHelpers;
 import com.direwolf20.mininggadgets.common.util.VectorHelper;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -25,29 +26,30 @@ import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.client.util.InputMappings;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
-import net.minecraft.fluid.IFluidState;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.UseAction;
+import net.minecraft.item.*;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Effects;
 import net.minecraft.util.*;
-import net.minecraft.util.math.*;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.BlockRayTraceResult;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.RayTraceContext;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.text.*;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.ToolType;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.energy.CapabilityEnergy;
 import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.fml.ForgeI18n;
+import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -62,7 +64,11 @@ public class MiningGadget extends Item {
     //private static int energyPerItem = 15;
 
     public MiningGadget() {
-        super(new Item.Properties().maxStackSize(1).group(MiningGadgets.itemGroup));
+        super(new Item.Properties()
+                .maxStackSize(1)
+                .group(MiningGadgets.itemGroup)
+                .setNoRepair());
+
         this.energyCapacity = Config.MININGGADGET_MAXPOWER.get();
     }
 
@@ -87,20 +93,16 @@ public class MiningGadget extends Item {
 
     @Override
     public double getDurabilityForDisplay(ItemStack stack) {
-        IEnergyStorage energy = stack.getCapability(CapabilityEnergy.ENERGY, null).orElse(null);
-        if (energy == null)
-            return 0;
-
-        return 1D - (energy.getEnergyStored() / (double) energy.getMaxEnergyStored());
+        return stack.getCapability(CapabilityEnergy.ENERGY, null)
+                .map(e -> 1D - (e.getEnergyStored() / (double) e.getMaxEnergyStored()))
+                .orElse(0D);
     }
 
     @Override
     public int getRGBDurabilityForDisplay(ItemStack stack) {
-        IEnergyStorage energy = stack.getCapability(CapabilityEnergy.ENERGY, null).orElse(null);
-        if (energy == null)
-            return super.getRGBDurabilityForDisplay(stack);
-
-        return MathHelper.hsvToRGB(Math.max(0.0F, (float) energy.getEnergyStored() / (float) energy.getMaxEnergyStored()) / 3.0F, 1.0F, 1.0F);
+        return stack.getCapability(CapabilityEnergy.ENERGY)
+                .map(e -> MathHelper.hsvToRGB(Math.max(0.0F, (float) e.getEnergyStored() / (float) e.getMaxEnergyStored()) / 3.0F, 1.0F, 1.0F))
+                .orElse(super.getRGBDurabilityForDisplay(stack));
     }
 
     @Override
@@ -110,27 +112,31 @@ public class MiningGadget extends Item {
         List<Upgrade> upgrades = UpgradeTools.getUpgrades(stack);
         Minecraft mc = Minecraft.getInstance();
 
-        if (!InputMappings.isKeyDown(mc.getMainWindow().getHandle(), mc.gameSettings.keyBindSneak.getKey().getKeyCode())) {
+        boolean sneakPressed = InputMappings.isKeyDown(mc.getMainWindow().getHandle(), mc.gameSettings.keyBindSneak.getKey().getKeyCode());
+
+        if (!sneakPressed) {
             tooltip.add(new TranslationTextComponent("mininggadgets.tooltip.item.show_upgrades",
-                    mc.gameSettings.keyBindSneak.getLocalizedName().toLowerCase())
-                    .applyTextStyle(TextFormatting.GRAY));
+                    new TranslationTextComponent(mc.gameSettings.keyBindSneak.getTranslationKey()).getString().toLowerCase())
+                    .mergeStyle(TextFormatting.GRAY));
         } else {
-            tooltip.add(new TranslationTextComponent("mininggadgets.tooltip.item.break_cost", getEnergyCost(stack)).applyTextStyle(TextFormatting.RED));
+            tooltip.add(new TranslationTextComponent("mininggadgets.tooltip.item.break_cost", getEnergyCost(stack)).mergeStyle(TextFormatting.RED));
             if (!(upgrades.isEmpty())) {
-                tooltip.add(new TranslationTextComponent("mininggadgets.tooltip.item.upgrades").applyTextStyle(TextFormatting.AQUA));
+                tooltip.add(new TranslationTextComponent("mininggadgets.tooltip.item.upgrades").mergeStyle(TextFormatting.AQUA));
                 for (Upgrade upgrade : upgrades) {
                     tooltip.add(new StringTextComponent(" - " +
                             I18n.format(upgrade.getLocal())
-                    ).applyTextStyle(TextFormatting.GRAY));
+                    ).mergeStyle(TextFormatting.GRAY));
                 }
             }
         }
 
         stack.getCapability(CapabilityEnergy.ENERGY, null)
-                .ifPresent(energy -> tooltip.add(
-                        new TranslationTextComponent("mininggadgets.gadget.energy",
-                                MiscTools.tidyValue(energy.getEnergyStored()),
-                                MiscTools.tidyValue(energy.getMaxEnergyStored())).applyTextStyles(TextFormatting.GREEN)));
+                .ifPresent(energy -> {
+                    TranslationTextComponent energyText = !sneakPressed
+                            ? new TranslationTextComponent("mininggadgets.gadget.energy", MagicHelpers.tidyValue(energy.getEnergyStored()), MagicHelpers.tidyValue(energy.getMaxEnergyStored()))
+                            : new TranslationTextComponent("mininggadgets.gadget.energy", String.format("%,d", energy.getEnergyStored()), String.format("%,d", energy.getMaxEnergyStored()));
+                    tooltip.add(energyText.mergeStyle(TextFormatting.GREEN));
+                });
     }
 
     @Override
@@ -158,7 +164,7 @@ public class MiningGadget extends Item {
         if (MiningProperties.getRange(tool) == 3)
             cost = cost * 9;
 
-        return energy.getEnergyStored() > cost;
+        return energy.getEnergyStored() >= cost;
     }
 
     public static boolean canMineBlock(ItemStack tool, World world, PlayerEntity player, BlockPos pos, BlockState state) {
@@ -196,8 +202,23 @@ public class MiningGadget extends Item {
         ItemStack itemstack = player.getHeldItem(hand);
 
         // Only perform the shift action
-        if (player.isShiftKeyDown())
-            return this.onItemShiftRightClick(world, player, hand, itemstack);
+        if (player.isSneaking()) {
+            if (!world.isRemote) {
+                MiningProperties.setCanMine(itemstack, true);
+//                return ActionResult.resultPass(itemstack);
+            }
+
+            if (world.isRemote) {
+                if (OurKeys.shiftClickGuiBinding.getKey() == InputMappings.INPUT_INVALID) {
+                    ModScreens.openGadgetSettingsScreen(itemstack);
+                    return ActionResult.resultPass(itemstack);
+                }
+            }
+
+            // INTENTIONALLY LEFT IN. I DON'T HAVE THE TIME TO FIX THIS ISSUE ATM
+            // @todo: migrate keybinding setting onto gadget so I can set a tag on the item
+            return ActionResult.resultPass(itemstack);
+        }
 
         if (world.isRemote) {
             float volume = MiningProperties.getVolume(itemstack);
@@ -213,25 +234,12 @@ public class MiningGadget extends Item {
         return new ActionResult<>(ActionResultType.PASS, itemstack);
     }
 
-    private ActionResult<ItemStack> onItemShiftRightClick(World world, PlayerEntity player, Hand hand, ItemStack itemstack) {
-        // Debug code for free energy
-        //itemstack.getCapability(CapabilityEnergy.ENERGY).ifPresent(e -> e.receiveEnergy(1500000000, false));
-
-        if (!world.isRemote)
-            MiningProperties.setCanMine(itemstack, true);
-
-        if (world.isRemote)
-            ModScreens.openGadgetSettingsScreen(itemstack);
-
-        return new ActionResult<>(ActionResultType.SUCCESS, itemstack);
-    }
-
     public List<BlockPos> findSources(World world, List<BlockPos> coords) {
         List<BlockPos> sources = new ArrayList<>();
         for (BlockPos coord : coords) {
             for (Direction side : Direction.values()) {
                 BlockPos sidePos = coord.offset(side);
-                IFluidState state = world.getFluidState(sidePos);
+                FluidState state = world.getFluidState(sidePos);
                 if ((state.getFluid().isEquivalentTo(Fluids.LAVA) || state.getFluid().isEquivalentTo(Fluids.WATER)))
                     if (!sources.contains(sidePos))
                         sources.add(sidePos);
@@ -246,16 +254,16 @@ public class MiningGadget extends Item {
         double randomTY = rand.nextDouble();
         double randomTZ = rand.nextDouble();
         double alpha = -0.5f + (1.0f - 0.5f) * rand.nextDouble(); //rangeMin + (rangeMax - rangeMin) * r.nextDouble();
-        Vec3d playerPos = player.getPositionVec().add(0, player.getEyeHeight(), 0);
-        Vec3d look = player.getLookVec(); // or getLook(partialTicks)
+        Vector3d playerPos = player.getPositionVec().add(0, player.getEyeHeight(), 0);
+        Vector3d look = player.getLookVec(); // or getLook(partialTicks)
         int range = MiningProperties.getBeamRange(stack);
         BlockRayTraceResult lookAt = VectorHelper.getLookingAt(player, RayTraceContext.FluidMode.NONE, range);
-        Vec3d lookingAt = lookAt.getHitVec();
+        Vector3d lookingAt = lookAt.getHitVec();
         //The next 3 variables are directions on the screen relative to the players look direction. So right = to the right of the player, regardless of facing direction.
-        Vec3d right = new Vec3d(-look.z, 0, look.x).normalize();
-        Vec3d forward = look;
-        Vec3d backward = look.mul(-1, 1, -1);
-        Vec3d down = right.crossProduct(forward);
+        Vector3d right = new Vector3d(-look.z, 0, look.x).normalize();
+        Vector3d forward = look;
+        Vector3d backward = look.mul(-1, 1, -1);
+        Vector3d down = right.crossProduct(forward);
 
         //These are used to calculate where the particles are going. We want them going into the laser, so we move the destination right, down, and forward a bit.
         right = right.scale(0.65f);
@@ -264,7 +272,7 @@ public class MiningGadget extends Item {
         backward = backward.scale(0.05);
 
         //Take the player's eye position, and shift it to where the end of the laser is (Roughly)
-        Vec3d laserPos = playerPos.add(right);
+        Vector3d laserPos = playerPos.add(right);
         laserPos = laserPos.add(forward);
         laserPos = laserPos.add(down);
         lookingAt = lookingAt.add(backward);
@@ -384,8 +392,11 @@ public class MiningGadget extends Item {
                 pos = lookingAt.getPos().offset(side).offset(right);
 
             if (world.getLight(pos) <= 7 && world.getBlockState(pos).getMaterial() == Material.AIR) {
-                world.setBlockState(pos, ModBlocks.MINERS_LIGHT.get().getDefaultState());
-                stack.getCapability(CapabilityEnergy.ENERGY).ifPresent(e -> e.receiveEnergy((Config.UPGRADECOST_LIGHT.get() * -1), false));
+                int energy = stack.getCapability(CapabilityEnergy.ENERGY).map(IEnergyStorage::getEnergyStored).orElse(0);
+                if (energy > Config.UPGRADECOST_LIGHT.get()) {
+                    world.setBlockState(pos, ModBlocks.MINERS_LIGHT.get().getDefaultState());
+                    stack.getCapability(CapabilityEnergy.ENERGY).ifPresent(e -> e.receiveEnergy((Config.UPGRADECOST_LIGHT.get() * -1), false));
+                }
             }
         }
     }

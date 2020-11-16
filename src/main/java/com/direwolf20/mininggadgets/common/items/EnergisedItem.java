@@ -1,4 +1,4 @@
-package com.direwolf20.mininggadgets.common.util;
+package com.direwolf20.mininggadgets.common.items;
 
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.energy.EnergyStorage;
@@ -35,8 +35,12 @@ public class EnergisedItem extends EnergyStorage {
 
     @Override
     public int receiveEnergy(int maxReceive, boolean simulate) {
-        int amount = super.receiveEnergy(maxReceive, simulate);
+        int stored = this.getEnergyStored() + maxReceive;
+        if (stored < 0) {
+            return 0;
+        }
 
+        int amount = super.receiveEnergy(maxReceive, simulate);
         if( !simulate )
             stack.getOrCreateTag().putInt("energy", this.energy);
 

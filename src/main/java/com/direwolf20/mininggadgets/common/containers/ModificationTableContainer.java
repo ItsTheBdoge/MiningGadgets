@@ -1,8 +1,8 @@
 package com.direwolf20.mininggadgets.common.containers;
 
 import com.direwolf20.mininggadgets.common.blocks.ModBlocks;
-import com.direwolf20.mininggadgets.common.gadget.upgrade.Upgrade;
-import com.direwolf20.mininggadgets.common.gadget.upgrade.UpgradeTools;
+import com.direwolf20.mininggadgets.common.items.upgrade.Upgrade;
+import com.direwolf20.mininggadgets.common.items.upgrade.UpgradeTools;
 import com.direwolf20.mininggadgets.common.items.MiningGadget;
 import com.direwolf20.mininggadgets.common.items.UpgradeCard;
 import net.minecraft.client.Minecraft;
@@ -134,7 +134,7 @@ public class ModificationTableContainer extends Container {
                     else
                         return ItemStack.EMPTY;
                 } else if (index < 29) {
-                    if (!this.mergeItemStack(stack, 29, 38, false)) {
+                    if (!this.mergeItemStack(stack, 29, 37, false)) {
                         return ItemStack.EMPTY;
                     }
                 } else if (index < 38 && !this.mergeItemStack(stack, 1, 29, false)) {
